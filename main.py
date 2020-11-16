@@ -9,7 +9,8 @@ import traceback
 bot = commands.Bot(
 	commands.when_mentioned, 
 	intents=discord.Intents.all(),
-	owner_ids={155159390637260800, 455289384187592704}
+	owner_ids={155159390637260800, 455289384187592704},
+	activity=discord.Game("with your feelings 💙 | @ me for help!")
 )
 
 try:
