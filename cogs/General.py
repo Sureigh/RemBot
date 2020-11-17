@@ -11,7 +11,7 @@ class General(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def convert(self, ctx, arg: discord.Message, arg2=None):
+    async def convert(self, ctx, message: discord.Message, unit=None):
         """
         Convert various Imperial units into Metric units, and vice versa.
         Currently only supports temperature.
