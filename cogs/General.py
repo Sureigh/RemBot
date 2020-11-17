@@ -25,7 +25,7 @@ class General(commands.Cog):
         temp_default = True
 
         # I have no fucking clue how RegEx works
-        result = re.search(r"(\d+)(?:[\s*°]?(?:[degrs]?)*)\s?([fc])?", arg.content, flags=re.I)
+        result = re.search(r"(\d+)(?:[\s*°]?(?:[degrs]?)*)\s?([fc])?", message.content, flags=re.I)
 
         # No results
         if result is None:
