@@ -29,7 +29,7 @@ class General(commands.Cog):
 
         # No results
         if result is None:
-            ctx.send("Error: No match found.")
+            await ctx.send("Error: No match found.")
 
         # An else *should* be enough here? Because if it doesn't match then it isn't a number idk
         else:
