@@ -11,40 +11,57 @@ class General(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def convert(self, ctx, message: discord.Message, unit=None):
+    async def convert(self, ctx, msg: discord.Message, unit=None):
         """
         Convert various Imperial units into Metric units, and vice versa.
         Currently only supports temperature.
         By default, will convert F into C.
         """
         # You can tell Sleigh worked on this command...
-        # TODO: All messages here should be constructed and sent as an embed. I'm too lazy to do it today. Tomorrow.
-        #  Soon. Eventually.
 
         # TODO: Make this a bot var
         temp_default = True
 
         # I have no fucking clue how RegEx works
-        result = re.search(r"(\d+)(?:[\s*°]?(?:[degrs]?)*)\s?([fc])?", message.content, flags=re.I)
+        results = re.findall(r"(\d+)(?:[\s*°]?(?:[degrs]?)*)\s?([fc])?", msg.content, flags=re.I)
 
-        # No results
-        if result is None:
-            await ctx.send("Error: No match found.")
+        # An error that happens only if there's no results found whatsoever
+        if not results:
+            embed = discord.Embed(
+                description="No match found.",
+                color=discord.Color.red()
+            ).set_author(name="Error:")
+            await ctx.send(embed=embed)
+            return
 
-        # An else *should* be enough here? Because if it doesn't match then it isn't a number idk
-        else:
+        # I mean, I *could* probably write all of this into a dict comprehension with a list comprehension...
+        # ...But that's messy and ugly.
+        systems = {"Metric": [],
+                   "Imperial": []}
+
+        for result in results:
             # Temperature
             # Formula: T(°C) = (T(°F) - 32) / 1.8
             temp = int(result[2])
 
             # C to F
-            if result[2].lower() == "c" or not temp_default:
-                ctx.send(f"{temp}°C is roughly {round((temp * 1.8 + 32), 1)}°F.")
+            if any(["c" in unit, result[2].lower() == "c", not temp_default]):
+                systems["Metric"].append(f"{temp}°C => {round((temp * 1.8 + 32), 1)}°F.")
 
             # F to C
             else:
-                await ctx.send(f"{temp}°F is roughly {round(((temp - 32) / 1.8), 1)}°C.")
+                systems["Imperial"].append(f"{temp}°F => {round(((temp - 32) / 1.8), 1)}°C.")
 
+        # TODO: In the future, we'll be doing more than just temperature, so use .add_field() instead and separate by
+        #  field type, I suppose.
+        async def send_embed(sys_name):
+            embed = discord.Embed(
+                description="\n".join([i for i in systems[sys_name]])
+            ).set_author(name=f"{sys_name} units found:")
+            await ctx.send(embed=embed)
+
+        for sys in systems:
+            await send_embed(sys)
 
 def setup(bot):
     bot.add_cog(General(bot))
