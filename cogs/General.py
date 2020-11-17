@@ -43,7 +43,7 @@ class General(commands.Cog):
 
             # F to C
             else:
-                ctx.send(f"{temp}°F is roughly {round(((temp - 32) / 1.8), 1)}°C.")
+                await ctx.send(f"{temp}°F is roughly {round(((temp - 32) / 1.8), 1)}°C.")
 
 
 def setup(bot):
