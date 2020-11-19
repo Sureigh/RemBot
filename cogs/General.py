@@ -3,6 +3,8 @@
 from discord.ext import commands
 import discord
 import re
+import pint
+
 
 class General(commands.Cog):
     """Random commands and stuffs go here, kthx"""
@@ -11,7 +13,7 @@ class General(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def convert(self, ctx, msg: discord.Message, unit=None):
+    async def convert(self, ctx, *, args):
         """
         Convert various Imperial units into Metric units, and vice versa.
         Currently only supports temperature.
@@ -22,8 +24,32 @@ class General(commands.Cog):
         # TODO: Make this a bot var
         temp_default = True
 
+        # Process message
+        # TODO: There has to be a smarter way; Too bad I'm not smart enough to know what it is lmao
+        # If msg
+        try:
+            msg = await commands.MemberConverter().convert(ctx, args)
+            msg = msg.content
+        except commands.MemberNotFound:
+            # If msg + unit
+            # TODO: This command won't work for units w/ spaces in them (e.g Nautical miles); IDK, find a better way
+            arg = args.split()
+            try:
+                msg = await commands.MemberConverter().convert(ctx, arg[-1])
+                msg = msg.content
+                unit = arg.pop(-1)
+            except commands.MemberNotFound:
+                # If unit
+                # TODO: Either regex/python parse text to check if "unit" here is any specified unit to "msg" convert to
+                #  e.g inch, ', c, feet etc, and if it's not any unit assume it's part of msg
+                # TODO: Replace "True" with parser
+                if arg[-1] == True:
+                    unit = arg.pop(-1)
+                msg = " ".join(arg)
+
         # I have no fucking clue how RegEx works
-        results = re.findall(r"(\d+)(?:[\s*°]?(?:[degrs]?)*)\s?([fc])?", msg.content, flags=re.I)
+        # TODO: Perhaps this can be less specific, but more diverse in finding what kind of units we're looking for?
+        results = re.findall(r"(\d+)(?:[\s*°]?(?:[degrs]?)*)\s?([fc])?", msg, flags=re.I)
 
         # An error that happens only if there's no results found whatsoever
         if not results:
@@ -34,6 +60,8 @@ class General(commands.Cog):
             await ctx.send(embed=embed)
             return
 
+        # TODO: Have a try/except clause here that will handle conversion errors
+        # TODO: In the future, make it a list in a dict within a dict, sorted by system->category->list of
         # I mean, I *could* probably write all of this into a dict comprehension with a list comprehension...
         # ...But that's messy and ugly.
         systems = {"Metric": [],
@@ -62,6 +90,7 @@ class General(commands.Cog):
 
         for sys in systems:
             await send_embed(sys)
+
 
 def setup(bot):
     bot.add_cog(General(bot))
