@@ -28,17 +28,17 @@ class General(commands.Cog):
         # TODO: There has to be a smarter way; Too bad I'm not smart enough to know what it is lmao
         # If msg
         try:
-            msg = await commands.MemberConverter().convert(ctx, args)
+            msg = await commands.MessageConverter().convert(ctx, args)
             msg = msg.content
-        except commands.MemberNotFound:
+        except commands.MessageNotFound:
             # If msg + unit
             # TODO: This command won't work for units w/ spaces in them (e.g Nautical miles); IDK, find a better way
             arg = args.split()
             try:
-                msg = await commands.MemberConverter().convert(ctx, arg[-1])
+                msg = await commands.MessageConverter().convert(ctx, arg[-1])
                 msg = msg.content
                 unit = arg.pop(-1)
-            except commands.MemberNotFound:
+            except commands.MessageNotFound:
                 # If unit
                 # TODO: Either regex/python parse text to check if "unit" here is any specified unit to "msg" convert to
                 #  e.g inch, ', c, feet etc, and if it's not any unit assume it's part of msg
