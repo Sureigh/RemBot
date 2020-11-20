@@ -91,6 +91,42 @@ class General(commands.Cog):
         for sys in systems:
             await send_embed(sys)
 
+    @commands.command()
+    async def list_emotes(self, ctx, channel=None):
+        """
+        Creates an automatically-updated list of emotes in the specified channel.
+        By default, sorts animated emotes together with non-animated ones.
+        Will paginate automatically.
+        """
+
+        emoji_list = False  # TODO: Make this a bot var
+
+        if channel is not None:
+            try:
+                _channel = await commands.TextChannelConverter().convert(ctx, channel)
+            except commands.ChannelNotReadable as error:
+                await ctx.send(f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...")
+                return
+            except commands.ChannelNotFound:
+                await ctx.send("Error: That channel doesn't seem to exist. Maybe it's hidden? u3u'")
+                return
+        else:
+            ctx.send("Which channel would you like to send the emote list to?")
+            # TODO: Add a wait_for("message") here which will retrieve and convert a message to a channel
+
+            _channel = """this is a placeholder to make my linter shut up"""
+
+        msg = "__**Emotes list**__\n"
+        template = ["{emoji} `{emoji}`\n", "`{emoji}` {emoji}\n"][emoji_list]  # Code golfing lmao
+
+        # TODO: Split animated and non-animated emotes
+        # I can't believe i have to use .format 😔
+        for emoji in sorted([emoji.name for emoji in ctx.guild.emojis]):
+            if len(msg) + len(template.format(emoji=emoji)) >= 2000:
+                _channel.send(msg)
+                msg = ""
+                # TODO: Add a check to properly add spacing between animated and non-animated emotes
+            msg += template.format(emoji=emoji)
 
 def setup(bot):
     bot.add_cog(General(bot))
