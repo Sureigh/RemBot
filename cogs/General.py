@@ -111,7 +111,7 @@ class General(commands.Cog):
                 await ctx.send("Error: That channel doesn't seem to exist. Maybe it's hidden? u3u'")
                 return
         else:
-            ctx.send("Which channel would you like to send the emote list to?")
+            await ctx.send("Which channel would you like to send the emote list to?")
             # TODO: Add a wait_for("message") here which will retrieve and convert a message to a channel
 
             _channel = """this is a placeholder to make my linter shut up"""
@@ -123,7 +123,7 @@ class General(commands.Cog):
         # I can't believe i have to use .format 😔
         for emoji in sorted([emoji.name for emoji in ctx.guild.emojis]):
             if len(msg) + len(template.format(emoji=emoji)) >= 2000:
-                _channel.send(msg)
+                await _channel.send(msg)
                 msg = ""
                 # TODO: Add a check to properly add spacing between animated and non-animated emotes
             msg += template.format(emoji=emoji)
