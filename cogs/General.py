@@ -63,5 +63,13 @@ class General(commands.Cog):
         for sys in systems:
             await send_embed(sys)
 
+    @commands.command()
+    async def create_embed(self, ctx, arg):
+        """
+        Allows the bot to create an embed message via user input.
+        Can be worked on over time and directed to send the completed embed to a specified channel on completion.
+        """
+        pass
+
 def setup(bot):
     bot.add_cog(General(bot))
