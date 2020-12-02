@@ -107,7 +107,7 @@ class General(commands.Cog):
                 await ctx.send(f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...")
                 return
             except commands.ChannelNotFound:
-                await ctx.send("Error: That channel doesn't seem to exist. Maybe it's hidden? u3u'")
+                await ctx.send("Error: That channel doesn't seem to exist... maybe it's hidden? u3u'")
                 return
         else:
             ctx.send("Which channel would you like to send the emote list to?")
