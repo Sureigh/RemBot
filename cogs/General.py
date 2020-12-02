@@ -4,6 +4,7 @@ from discord.ext import commands
 import discord
 import re
 import pint
+import itertools
 
 
 class General(commands.Cog):
@@ -99,8 +100,6 @@ class General(commands.Cog):
         Will paginate automatically.
         """
 
-        emoji_list = False  # TODO: Make this a bot var
-
         if channel is not None:
             try:
                 _channel = await commands.TextChannelConverter().convert(ctx, channel)
@@ -111,22 +110,33 @@ class General(commands.Cog):
                 await ctx.send("Error: That channel doesn't seem to exist. Maybe it's hidden? u3u'")
                 return
         else:
-            await ctx.send("Which channel would you like to send the emote list to?")
+            ctx.send("Which channel would you like to send the emote list to?")
             # TODO: Add a wait_for("message") here which will retrieve and convert a message to a channel
 
             _channel = """this is a placeholder to make my linter shut up"""
 
-        msg = "__**Emotes list**__\n"
-        template = ["{emoji} `{emoji}`\n", "`{emoji}` {emoji}\n"][emoji_list]  # Code golfing lmao
+        split_animated = False  # TODO: Allow editing this in config
+        template = "{emoji} `{emoji}`"  # TODO: Allow editing this in config
+        sent = []  # TODO: This should be in DB
 
-        # TODO: Split animated and non-animated emotes
+        # Thanks, Devon, I learned something new
+        guild_emojis = sorted(ctx.guild.emojis, key=lambda e: not e.animated)
+        emoji_lists = itertools.groupby(guild_emojis, key=lambda e: e.animated)
+
+        if not split_animated:
+            # emoji_lists (should) return a tuple of lists - figure out how to unpack and repack into one list
+            pass
+
         # I can't believe i have to use .format 😔
-        for emoji in sorted([emoji.name for emoji in ctx.guild.emojis]):
-            if len(msg) + len(template.format(emoji=emoji)) >= 2000:
-                await _channel.send(msg)
-                msg = ""
-                # TODO: Add a check to properly add spacing between animated and non-animated emotes
-            msg += template.format(emoji=emoji)
+        for i, emojis in enumerate(emoji_lists):
+            msg = {0: "__**Emotes list**__",
+                   1: "__**Animated Emotes list**__"}[i] + "\n"  # TODO: Allow editing this in config
+            for emoji in sorted([emoji.name for emoji in emojis]):
+                if len(msg) + len(template.format(emoji=emoji)) >= 2000:
+                    sent.append(await _channel.send(msg))
+                    msg = ""
+                msg += template.format(emoji=emoji) + "\n"
+            sent.append(await _channel.send(msg))
 
 def setup(bot):
     bot.add_cog(General(bot))
