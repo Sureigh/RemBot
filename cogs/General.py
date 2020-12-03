@@ -82,14 +82,11 @@ class General(commands.Cog):
 
         # TODO: In the future, we'll be doing more than just temperature, so use .add_field() instead and separate by
         #  field type, I suppose.
-        async def send_embed(sys_name):
+        for sys in systems:
             embed = discord.Embed(
-                description="\n".join([i for i in systems[sys_name]])
+                description="\n".join(i for i in systems[sys])
             ).set_author(name=f"{sys_name} units found:")
             await ctx.send(embed=embed)
-
-        for sys in systems:
-            await send_embed(sys)
 
 
 def setup(bot):
