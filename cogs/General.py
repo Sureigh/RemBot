@@ -100,34 +100,40 @@ class General(commands.Cog):
         Will paginate automatically.
         """
 
-        if channel is not None:
-            try:
+        try:
+            if channel is not None:
                 _channel = await commands.TextChannelConverter().convert(ctx, channel)
-            except commands.ChannelNotReadable as error:
-                await ctx.send(f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...")
-                return
-            except commands.ChannelNotFound:
-                await ctx.send("Error: That channel doesn't seem to exist... maybe it's hidden? u3u'")
-                return
-        else:
-            ctx.send("Which channel would you like to send the emote list to?")
-            # TODO: Add a wait_for("message") here which will retrieve and convert a message to a channel
-
-            _channel = """this is a placeholder to make my linter shut up"""
+            else:
+                ctx.send("Which channel would you like to send the emote list to?")
+                msg = await bot.wait_for("Message", check=lambda msg: all(ctx.author == msg.author,
+                                                                          ctx.channel == msg.channel))
+                _channel = await commands.TextChannelConverter().convert(ctx, msg.content)
+        except commands.BadArgument as error:
+            # Maya I'm so sorry
+            msg = {
+                commands.ChannelNotReadable:
+                f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...",
+                commands.ChannelNotFound:
+                "Error: That channel doesn't seem to exist... maybe it's hidden? u3u'"
+                  }[error]
+            await ctx.send(msg)
+            return
 
         split_animated = False  # TODO: Allow editing this in config
         template = "{emoji} `{emoji}`"  # TODO: Allow editing this in config
         sent = []  # TODO: This should be in DB
 
         # Thanks, Devon, I learned something new
-        guild_emojis = sorted(ctx.guild.emojis, key=lambda e: not e.animated)
-        emoji_lists = itertools.groupby(guild_emojis, key=lambda e: e.animated)
+        guild_emojis = sorted(ctx.guild.emojis, key=lambda e: e.animated)
+        emoji_lists = itertools.groupby(guild_emojis, key=lambda e: not e.animated)
 
-        if not split_animated:
-            # emoji_lists (should) return a tuple of lists - figure out how to unpack and repack into one list
-            pass
+        # emoji_lists will return either a singular list of all emojis in the server, or a tuple of two lists - one
+        # with all emojis, one with all animated emojis.
 
-        # I can't believe i have to use .format 😔
+        if not split_animated and len(emoji_lists) > 1:
+            emoji_lists = [emoji for emoji in [emoji_list for emoji_list in emoji_lists]]  # I think this works IDK
+
+        # I can't believe i have to use .format and string concatenation 😔
         for i, emojis in enumerate(emoji_lists):
             msg = {0: "__**Emotes list**__",
                    1: "__**Animated Emotes list**__"}[i] + "\n"  # TODO: Allow editing this in config
@@ -137,6 +143,13 @@ class General(commands.Cog):
                     msg = ""
                 msg += template.format(emoji=emoji) + "\n"
             sent.append(await _channel.send(msg))
+
+        # TODO: Make sure if sent in an empty channel, will remove/send messages as necessary when emojis are
+        #  added/removed. See on_guild_emojis_update() for more info
+
+        # TODO: Add a feature where, if the channel where the bot is posting ahead in already is not completely empty,
+        #  the bot will "reserve" slots for future use. Of course, reserved message slots will be configurable. Default
+        #  should be two slots + actual message.
 
 def setup(bot):
     bot.add_cog(General(bot))
