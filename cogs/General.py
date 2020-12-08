@@ -105,11 +105,12 @@ class General(commands.Cog):
                 _channel = await commands.TextChannelConverter().convert(ctx, channel)
             else:
                 ctx.send("Which channel would you like to send the emote list to?")
-                msg = await bot.wait_for("Message", check=lambda msg: all(ctx.author == msg.author,
-                                                                          ctx.channel == msg.channel))
+                msg = await self.bot.wait_for("Message", check=lambda msg: all([ctx.author == msg.author,
+                                                                                ctx.channel == msg.channel]))
                 _channel = await commands.TextChannelConverter().convert(ctx, msg.content)
         except commands.BadArgument as error:
             # Maya I'm so sorry
+            # TODO: Check if this part even works lol
             msg = {
                 commands.ChannelNotReadable:
                 f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...",
@@ -124,11 +125,11 @@ class General(commands.Cog):
         sent = []  # TODO: This should be in DB
 
         # Thanks, Devon, I learned something new
-        guild_emojis = sorted(ctx.guild.emojis, key=lambda e: e.animated)
-        emoji_lists = itertools.groupby(guild_emojis, key=lambda e: not e.animated)
 
         # emoji_lists will return either a singular list of all emojis in the server, or a tuple of two lists - one
         # with all emojis, one with all animated emojis.
+        guild_emojis = sorted(ctx.guild.emojis, key=lambda e: e.animated)
+        emoji_lists = itertools.groupby(guild_emojis, key=lambda e: not e.animated)
 
         if not split_animated and len(emoji_lists) > 1:
             emoji_lists = [emoji for emoji in [emoji_list for emoji_list in emoji_lists]]  # I think this works IDK
