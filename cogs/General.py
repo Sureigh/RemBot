@@ -130,12 +130,14 @@ class General(commands.Cog):
         for a, e in emojis:
             msg = {False: "__**Emotes list**__",
                    True: "__**Animated Emotes list**__"}[a] + "\n"  # TODO: Allow editing this in config
-            for emoji in sorted([emoji.name for emoji in e]):
+            for emoji in sorted(e, key=lambda e: e.name):
                 if len(msg) + len(template.format(emoji=emoji)) >= 2000:
                     sent.append(await _channel.send(msg))
                     msg = ""
                 msg += template.format(emoji=emoji) + "\n"
             sent.append(await _channel.send(msg))
+
+        await _channel.send(f"lmao this is for debug purposes ignore me pls\n{sent}")
 
         # TODO: Make sure if sent in an empty channel, will remove/send messages as necessary when emojis are
         #  added/removed. See on_guild_emojis_update() for more info
