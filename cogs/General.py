@@ -116,7 +116,7 @@ class General(commands.Cog):
             return
 
         split_animated = False  # TODO: Allow editing this in config
-        template = "{emoji} `{emoji}`"  # TODO: Allow editing this in config
+        template = "{emoji} `{emoji.name}`"  # TODO: Allow editing this in config
         sent = []  # TODO: This should be in DB
 
         # Creates two separate iterables, one animated, one non-animated emojis.
@@ -130,7 +130,7 @@ class General(commands.Cog):
         for a, e in emojis:
             msg = {False: "__**Emotes list**__",
                    True: "__**Animated Emotes list**__"}[a] + "\n"  # TODO: Allow editing this in config
-            for emoji in sorted(e, key=lambda e: e.name):
+            for emoji in sorted(e, key=lambda e: e.name.lower()):
                 if len(msg) + len(template.format(emoji=emoji)) >= 2000:
                     sent.append(await _channel.send(msg))
                     msg = ""
