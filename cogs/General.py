@@ -99,25 +99,19 @@ class General(commands.Cog):
         By default, sorts animated emotes together with non-animated ones.
         Will paginate automatically.
         """
-
         try:
             if channel is not None:
                 _channel = await commands.TextChannelConverter().convert(ctx, channel)
             else:
-                ctx.send("Which channel would you like to send the emote list to?")
+                await ctx.send("Which channel would you like to send the emote list to?")
                 msg = await self.bot.wait_for("Message", check=lambda msg: all([ctx.author == msg.author,
                                                                                 ctx.channel == msg.channel]))
                 _channel = await commands.TextChannelConverter().convert(ctx, msg.content)
-        except commands.BadArgument as error:
-            # Maya I'm so sorry
-            # TODO: Check if this part even works lol
-            msg = {
-                commands.ChannelNotReadable:
-                f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...",
-                commands.ChannelNotFound:
-                "Error: That channel doesn't seem to exist... maybe it's hidden? u3u'"
-                  }[error]
-            await ctx.send(msg)
+        except commands.ChannelNotReadable as error:
+            await ctx.send(f"Error: Sorry, I don't have the permissions to view {error.argument.mention}...")
+            return
+        except commands.ChannelNotFound:
+            await ctx.send("Error: That channel doesn't seem to exist... maybe it's hidden? u3u'")
             return
 
         split_animated = False  # TODO: Allow editing this in config
