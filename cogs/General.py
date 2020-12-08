@@ -99,6 +99,7 @@ class General(commands.Cog):
         By default, sorts animated emotes together with non-animated ones.
         Will paginate automatically.
         """
+
         try:
             if channel is not None:
                 _channel = await commands.TextChannelConverter().convert(ctx, channel)
@@ -118,21 +119,18 @@ class General(commands.Cog):
         template = "{emoji} `{emoji}`"  # TODO: Allow editing this in config
         sent = []  # TODO: This should be in DB
 
-        # Thanks, Devon, I learned something new
+        # Creates two separate iterables, one animated, one non-animated emojis.
+        emojis = [(False, ctx.guild.emojis)]
 
-        # emoji_lists will return either a singular list of all emojis in the server, or a tuple of two lists - one
-        # with all emojis, one with all animated emojis.
-        guild_emojis = sorted(ctx.guild.emojis, key=lambda e: e.animated)
-        emoji_lists = list(itertools.groupby(guild_emojis, key=lambda e: not e.animated))
-
-        if not split_animated and len(emoji_lists) > 1:
-            emoji_lists = [emoji for emoji in [emoji_list for emoji_list in emoji_lists]]  # I think this works IDK
+        if split_animated:
+            emoji = set(filter(lambda e: not e.animated, ctx.guild.emojis))
+            emojis = [(False, [*emoji]), (True, [*(set(ctx.guild.emojis) - emoji)])]
 
         # I can't believe i have to use .format and string concatenation 😔
-        for i, emojis in enumerate(emoji_lists):
-            msg = {0: "__**Emotes list**__",
-                   1: "__**Animated Emotes list**__"}[i] + "\n"  # TODO: Allow editing this in config
-            for emoji in sorted([emoji.name for emoji in emojis]):
+        for a, e in emojis:
+            msg = {False: "__**Emotes list**__",
+                   True: "__**Animated Emotes list**__"}[a] + "\n"  # TODO: Allow editing this in config
+            for emoji in sorted([emoji.name for emoji in e]):
                 if len(msg) + len(template.format(emoji=emoji)) >= 2000:
                     sent.append(await _channel.send(msg))
                     msg = ""
