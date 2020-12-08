@@ -13,6 +13,11 @@ class General(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
+        # Stuff for list_emotes
+        bot.split_animated = False  # TODO: Allow editing this in config
+        bot.template = "{emoji} `{emoji.name}`"  # TODO: Allow editing this in config
+        bot.debug = False
+
     @commands.command()
     async def convert(self, ctx, *, args):
         """
@@ -115,16 +120,16 @@ class General(commands.Cog):
             await ctx.send("Error: That channel doesn't seem to exist... maybe it's hidden? u3u'")
             return
 
-        split_animated = False  # TODO: Allow editing this in config
-        template = "{emoji} `{emoji.name}`"  # TODO: Allow editing this in config
         sent = []  # TODO: This should be in DB
 
         # Creates two separate iterables, one animated, one non-animated emojis.
         emojis = [(False, ctx.guild.emojis)]
 
-        if split_animated:
+        if self.bot.split_animated:
             emoji = set(filter(lambda e: not e.animated, ctx.guild.emojis))
             emojis = [(False, [*emoji]), (True, [*(set(ctx.guild.emojis) - emoji)])]
+
+        template = self.bot.template
 
         # I can't believe i have to use .format and string concatenation 😔
         for a, e in emojis:
@@ -137,7 +142,8 @@ class General(commands.Cog):
                 msg += template.format(emoji=emoji) + "\n"
             sent.append(await _channel.send(msg))
 
-        await _channel.send(f"lmao this is for debug purposes ignore me pls\n{sent}")
+        if self.bot.debug:
+            await _channel.send(f"lmao this is for debug purposes ignore me pls\n{sent}")
 
         # TODO: Make sure if sent in an empty channel, will remove/send messages as necessary when emojis are
         #  added/removed. See on_guild_emojis_update() for more info
