@@ -92,7 +92,7 @@ class General(commands.Cog):
         for sys in systems:
             await send_embed(sys)
 
-    @commands.command()
+    @commands.command(aliases=["emote_list", "emotes", "emojis", "list_emojis", "emoji_list"])
     async def list_emotes(self, ctx, channel=None):
         """
         Creates an automatically-updated list of emotes in the specified channel.
@@ -123,7 +123,7 @@ class General(commands.Cog):
         # emoji_lists will return either a singular list of all emojis in the server, or a tuple of two lists - one
         # with all emojis, one with all animated emojis.
         guild_emojis = sorted(ctx.guild.emojis, key=lambda e: e.animated)
-        emoji_lists = itertools.groupby(guild_emojis, key=lambda e: not e.animated)
+        emoji_lists = list(itertools.groupby(guild_emojis, key=lambda e: not e.animated))
 
         if not split_animated and len(emoji_lists) > 1:
             emoji_lists = [emoji for emoji in [emoji_list for emoji_list in emoji_lists]]  # I think this works IDK
