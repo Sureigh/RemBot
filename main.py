@@ -20,7 +20,7 @@ except commands.ExtensionError:
 	pass
 
 for file in glob.glob("cogs/*.py"):
-	fname = fname.replace(os.sep, '.')[:-3]
+	fname = file.replace(os.sep, '.')[:-3]
 	try:
 		bot.load_extension(fname)
 		print("Found and loaded", fname)
