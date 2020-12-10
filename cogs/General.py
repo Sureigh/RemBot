@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from discord.ext import commands
+from discord.ext import commands, flags
 import discord
 import re
 
@@ -63,8 +63,48 @@ class General(commands.Cog):
         for sys in systems:
             await send_embed(sys)
 
-    @commands.command()
-    async def create_embed(self, ctx, arg):
+    # Embed management
+    @flags.add_flag("-channel", "-c",
+                    type=discord.TextChannel,
+                    help="Sets the channel for the complete embed to be sent to.")
+    @flags.add_flag("-send",
+                    help="Sends the completed embed to the set channel.")
+    # Author
+    @flags.add_flag("-author_set", "-as",
+                    type=discord.User,
+                    help="Set Avatar + Name of the embed to a user.")
+    @flags.add_flag("-author_name", "-an",
+                    help="The name of the author.")
+    @flags.add_flag("-author_url", "-au",
+                    help="The URL for the author.")
+    @flags.add_flag("-author_icon", "-ai",
+                    help="The URL of the author icon. Only HTTP(S) is supported.")
+    @flags.add_flag("-author_clear", "-ac",
+                    help="Clears embed’s author information.")
+    # Embed info
+    @flags.add_flag("-embed_title", "-et",
+                    default="Placeholder",
+                    help="The title of the embed.")
+    @flags.add_flag("-embed_desc", "-ed",
+                    default="Placeholder",
+                    help="The description of the embed.")
+    @flags.add_flag("-embed_url", "-eu",
+                    help="The URL of the embed. ")
+    # Embed info - optional
+    # TODO: Add color, image, footer, footer icon and timestamp here
+    # Embed fields
+    # TODO: Think of how to handle navigating different fields in the command. Thinking maybe it can either be browsed
+    #  by a top left to bottom right index system (starting from 1, for non-programmers), and/or by the exact field name
+    @flags.add_flag("-field_name", "-fn",
+                    help="The name of the field.")
+    @flags.add_flag("-field_value", "-fv",
+                    help="The value of the field.")
+    @flags.add_flag("-field_inline", "-fi",
+                    type=str.lower,
+                    choices=["true", "false", "t", "f"],
+                    help="Whether the field should be displayed inline.")
+    @flags.command(aliases=["embed"])
+    async def create_embed(self, ctx, **args):
         """
         Allows the bot to create an embed message via user input.
         Can be worked on over time and directed to send the completed embed to a specified channel on completion.
