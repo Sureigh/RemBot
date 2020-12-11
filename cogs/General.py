@@ -63,25 +63,41 @@ class General(commands.Cog):
         for sys in systems:
             await send_embed(sys)
 
+    # TODO: nargs will probably split anything longer than one word into multiple args, find out how to fix that
+    # TODO: Write format for each command
     # Embed management
-    @flags.add_flag("-channel", "-c",
+    @flags.add_flag("--channel", "--c",
                     type=discord.TextChannel,
                     help="Sets the channel for the complete embed to be sent to.")
-    @flags.add_flag("-send",
+    @flags.add_flag("--send", "--s",
+                    action="store_true",
                     help="Sends the completed embed to the set channel.")
+    @flags.add_flag("--reset", "--r",
+                    action="store_true",
+                    help="Reset and clear the embed.")
     # Author
-    @flags.add_flag("-author_set", "-as",
+    @flags.add_flag("--author_set", "--as",
                     type=discord.User,
-                    help="Set Avatar + Name of the embed to a user.")
+                    help="Set avatar + name of the embed to a user.")
+    @flags.add_flag("--author", "--a",
+                    nargs="*",
+                    help="Author: [user] [name] [URL] [icon URL]")
+    @flags.add_flag("--author_clear", "--acl",
+                    action="store_true",
+                    help="Clears embed’s author information.")
     @flags.add_flag("-author_name", "-an",
                     help="The name of the author.")
     @flags.add_flag("-author_url", "-au",
                     help="The URL for the author.")
     @flags.add_flag("-author_icon", "-ai",
                     help="The URL of the author icon. Only HTTP(S) is supported.")
-    @flags.add_flag("-author_clear", "-ac",
-                    help="Clears embed’s author information.")
     # Embed info
+    @flags.add_flag("--embed", "--e",
+                    nargs="*",
+                    help="Embed: [title] [desc] [URL]")
+    @flags.add_flag("--embed_clear", "--ecl",
+                    action="store_true",
+                    help="Clears embed's information.")
     @flags.add_flag("-embed_title", "-et",
                     default="Placeholder",
                     help="The title of the embed.")
@@ -91,18 +107,36 @@ class General(commands.Cog):
     @flags.add_flag("-embed_url", "-eu",
                     help="The URL of the embed. ")
     # Embed info - optional
-    # TODO: Add color, image, footer, footer icon and timestamp here
+    @flags.add_flag("--embed_optional", "--eo",
+                    nargs="*",
+                    help="Embed optionals: [color] [image URL] [footer text] [footer URL] [timestamp]")
+    @flags.add_flag("--embed_optional_clear", "--eocl",
+                    action="store_true",
+                    help="Clears embed's optional information.")
+    @flags.add_flag("-embed_color", "-embed_colour", "-ec",
+                    help="The color code of the embed.")
+    @flags.add_flag("-embed_image", "-ei",
+                    help="The image for the embed content.")
+    @flags.add_flag("-embed_footer", "-ef",
+                    help="The footer text.")
+    @flags.add_flag("-embed_footer_url", "-efu",
+                    help="The URL of the footer icon.")
+    @flags.add_flag("-embed_timestamp", "-ets",
+                    help="The timestamp of the embed content.")
     # Embed fields
-    # TODO: Think of how to handle navigating different fields in the command. Thinking maybe it can either be browsed
-    #  by a top left to bottom right index system (starting from 1, for non-programmers), and/or by the exact field name
     @flags.add_flag("-field_name", "-fn",
-                    help="The name of the field.")
+                    nargs=2,
+                    help="The name of the field."
+                         "Format: `-fn [field number] [field name]`")
     @flags.add_flag("-field_value", "-fv",
-                    help="The value of the field.")
+                    nargs=2,
+                    help="The value of the field."
+                         "Format: `-fn [field number] [field value]`")
     @flags.add_flag("-field_inline", "-fi",
-                    type=str.lower,
-                    choices=["true", "false", "t", "f"],
-                    help="Whether the field should be displayed inline.")
+                    nargs=2,
+                    choices=["true", "false", "t", "f", "yes", "no", "y", "n"],
+                    help="Whether the field should be displayed inline."
+                         "Format: `-fn [field number] [true/false]`")
     @flags.command(aliases=["embed"])
     async def create_embed(self, ctx, **args):
         """
