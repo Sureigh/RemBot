@@ -28,7 +28,8 @@ class FeedHandler:
                 self.currently_checking[sub] = self.loop.create_task(self.check(sub))
 
     def __repr__(self):
-        return f"FeedHandler({self.channel_id}, {self.sub}, {self.upvote_limit}, {self.currently_checking}, {self.webhook.url})"
+        return (f"FeedHandler({self.channel_id}, {self.sub}, {self.upvote_limit}, {self.currently_checking}, "
+                f"{self.webhook.url})")
 
     async def auto_handler_task(self):
         self.sub = await praw.subreddit(self._sub)
@@ -44,7 +45,7 @@ class FeedHandler:
                     self.currently_checking[sub] = self.loop.create_task(self.check(sub))
                 await asyncio.sleep(10)
         except Exception as e:
-            print("Error occured during automatic handler:", file=sys.stderr)
+            print("Error occurred during automatic handler:", file=sys.stderr)
             traceback.print_exception(type(e), e, e.__traceback__)
 
     async def check(self, subn):
@@ -54,7 +55,8 @@ class FeedHandler:
             while True:
                 sub = await praw.submission(id=subn)
                 await sub.load()
-                print(f"Checking if /r/{self._sub}/comments/{subn} has reached upvote threshold ({sub.score}/{self.upvote_limit}) ({12-tries} attempts remaining)")
+                print(f"Checking if /r/{self._sub}/comments/{subn} has reached upvote threshold "
+                      f"({sub.score}/{self.upvote_limit}) ({12-tries} attempts remaining)")
                 if sub.score >= self.upvote_limit:
                     await self.dispatch(subn)
                     break
@@ -63,7 +65,7 @@ class FeedHandler:
                     break
                 await asyncio.sleep(360)
         except Exception as e:
-            print("Error occured during periodic updater:")
+            print("Error occurred during periodic updater:")
             traceback.print_exception(type(e), e, e.__traceback__)
         finally:
             task = self.currently_checking.pop(subn, None)
@@ -101,7 +103,7 @@ class FeedHandler:
                 self.timer.cancel()
                 return
         except Exception as e:
-            print("Error occured whilst dispatching", file=sys.stderr)
+            print("Error occurred whilst dispatching", file=sys.stderr)
             traceback.print_exception(type(e), e, e.__traceback__)
 
     @property
@@ -134,7 +136,8 @@ class Reddit(commands.Cog):
     async def reddit(self, ctx):
         """Base command for auto-reddit feed related commands."""
 
-    @flags.add_flag("-u", "--upvote-limit", type=int, help="The required amount of upvotes before dispatching.", default=0)
+    @flags.add_flag("-u", "--upvote-limit", type=int,
+                    help="The required amount of upvotes before dispatching.", default=0)
     @reddit.command(cls=flags.FlagCommand)
     @commands.has_permissions(manage_channels=True, manage_webhooks=True)
     @commands.bot_has_permissions(manage_webhooks=True)
@@ -154,8 +157,9 @@ class Reddit(commands.Cog):
         except IndexError:
             webhook = await ctx.channel.create_webhook(name="Auto-reddit by Rem")
 
-        self.feeds[ctx.channel.id] = FeedHandler(self.bot, ctx.channel.id, **{"sub": sub, "limit": options['upvote_limit'],
-                                                                            "current": [], "webhook": webhook.url})
+        self.feeds[ctx.channel.id] = FeedHandler(self.bot, ctx.channel.id, **{"sub": sub,
+                                                                              "limit": options['upvote_limit'],
+                                                                              "current": [], "webhook": webhook.url})
         await ctx.send("Done! You should now get express images straight from Reddit!~")
 
 def setup(bot):

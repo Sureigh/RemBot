@@ -30,7 +30,7 @@ class Rem(commands.Bot):
 			self.load_extension('jishaku')
 			print("Found and loaded Jishaku")
 		except commands.ExtensionError:
-			pass
+			print("Failed to load Jishaku. You should probably look into that, y'know...")
 
 		for file in glob.glob("cogs/*.py"):
 			fname = file.replace(os.sep, '.')[:-3]
@@ -56,5 +56,6 @@ class Rem(commands.Bot):
 			await self.session.close()
 			self.session = None
 		return await super().close()
+
 
 Rem().run(config.token)
