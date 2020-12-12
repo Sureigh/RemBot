@@ -2,11 +2,15 @@ import discord
 from discord.ext import commands
 import glob
 import config
-import os
+import os, os.path
 import sys
 import traceback
 import aiohttp
 import json
+
+if not os.path.isfile("feeds.json"):
+	with open("feeds.json", "w") as f:
+		f.write("{}")
 
 class Rem(commands.Bot):
 	def __init__(self):
