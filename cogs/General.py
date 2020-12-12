@@ -5,6 +5,7 @@ import discord
 import re
 import pint
 import itertools
+import random
 
 
 class General(commands.Cog):
@@ -151,6 +152,11 @@ class General(commands.Cog):
         # TODO: Add a feature where, if the channel where the bot is posting ahead in already is not completely empty,
         #  the bot will "reserve" slots for future use. Of course, reserved message slots will be configurable. Default
         #  should be two slots + actual message.
+
+    @commands.command()
+    async def someone(self, ctx):
+        await ctx.send(random.choice(ctx.guild.members).mention)
+        # TODO: Add ability to exclude admins/moderators?
 
 def setup(bot):
     bot.add_cog(General(bot))
