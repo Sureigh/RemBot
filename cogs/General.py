@@ -155,7 +155,6 @@ class General(commands.Cog):
 
     @commands.command()
     async def someone(self, ctx):
-        await ctx.message.delete()
         await ctx.send(random.choice(ctx.guild.members).mention)
         # TODO: Add ability to exclude admins/moderators?
 
