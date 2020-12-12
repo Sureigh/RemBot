@@ -64,11 +64,11 @@ class General(commands.Cog):
             await send_embed(sys)
 
     # TODO: nargs will probably split anything longer than one word into multiple args, find out how to fix that
-    # TODO: Write format for each command
     # Embed management
     @flags.add_flag("--channel", "--c",
                     type=discord.TextChannel,
-                    help="Sets the channel for the complete embed to be sent to.")
+                    help="Sets the channel for the complete embed to be sent to.\n"
+                         "Format: `--c [channel]`")
     @flags.add_flag("--send", "--s",
                     action="store_true",
                     help="Sends the completed embed to the set channel.")
@@ -78,34 +78,42 @@ class General(commands.Cog):
     # Author
     @flags.add_flag("--author_set", "--as",
                     type=discord.User,
-                    help="Set avatar + name of the embed to a user.")
+                    help="Set avatar + name of the embed to a user.\n"
+                         "Format: `--as [user]`")
     @flags.add_flag("--author", "--a",
                     nargs="*",
-                    help="Author: [user] [name] [URL] [icon URL]")
+                    help="Set author of an embed.\n"
+                         "Author: [user] [name] [author URL] [icon URL]")
     @flags.add_flag("--author_clear", "--acl",
                     action="store_true",
                     help="Clears embed’s author information.")
     @flags.add_flag("-author_name", "-an",
-                    help="The name of the author.")
+                    help="The name of the author.\n"
+                         "Format: `-an [name]`")
     @flags.add_flag("-author_url", "-au",
-                    help="The URL for the author.")
+                    help="The URL for the author.\n"
+                         "Format: `-au [author URL]`")
     @flags.add_flag("-author_icon", "-ai",
-                    help="The URL of the author icon. Only HTTP(S) is supported.")
+                    help="The URL of the author icon.\n"
+                         "Format: `-ai [icon URL]`")
     # Embed info
     @flags.add_flag("--embed", "--e",
                     nargs="*",
-                    help="Embed: [title] [desc] [URL]")
+                    help="Embed: [title] [desc] [embed URL]")
     @flags.add_flag("--embed_clear", "--ecl",
                     action="store_true",
                     help="Clears embed's information.")
     @flags.add_flag("-embed_title", "-et",
                     default="Placeholder",
-                    help="The title of the embed.")
+                    help="The title of the embed.\n"
+                         "Format: `-et [title]`")
     @flags.add_flag("-embed_desc", "-ed",
                     default="Placeholder",
-                    help="The description of the embed.")
+                    help="The description of the embed.\n"
+                         "Format: `-ed [desc]`")
     @flags.add_flag("-embed_url", "-eu",
-                    help="The URL of the embed. ")
+                    help="The URL of the embed.\n"
+                         "Format: `-eu [embed URL]`")
     # Embed info - optional
     @flags.add_flag("--embed_optional", "--eo",
                     nargs="*",
@@ -114,15 +122,20 @@ class General(commands.Cog):
                     action="store_true",
                     help="Clears embed's optional information.")
     @flags.add_flag("-embed_color", "-embed_colour", "-ec",
-                    help="The color code of the embed.")
+                    help="The color code of the embed.\n"
+                         "Format: `-ec [color]`")
     @flags.add_flag("-embed_image", "-ei",
-                    help="The image for the embed content.")
+                    help="The image for the embed content.\n"
+                         "Format: `-ei [image URL]`")
     @flags.add_flag("-embed_footer", "-ef",
-                    help="The footer text.")
+                    help="The footer text.\n"
+                         "Format: `-ef [footer]`")
     @flags.add_flag("-embed_footer_url", "-efu",
-                    help="The URL of the footer icon.")
+                    help="The URL of the footer icon.\n"
+                         "Format: `-efu [footer URL]`")
     @flags.add_flag("-embed_timestamp", "-ets",
-                    help="The timestamp of the embed content.")
+                    help="The timestamp of the embed content."
+                         "Format: `-ets [time]`")
     # Embed fields
     @flags.add_flag("-field_name", "-fn",
                     nargs=2,
@@ -135,7 +148,7 @@ class General(commands.Cog):
     @flags.add_flag("-field_inline", "-fi",
                     nargs=2,
                     choices=["true", "false", "t", "f", "yes", "no", "y", "n"],
-                    help="Whether the field should be displayed inline."
+                    help="Whether the field should be displayed inline.\n"
                          "Format: `-fn [field number] [true/false]`")
     @flags.command(aliases=["embed"])
     async def create_embed(self, ctx, **args):
