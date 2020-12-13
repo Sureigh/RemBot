@@ -14,15 +14,18 @@ praw = asyncpraw.Reddit(client_id=reddit['id'], client_secret=reddit['secret'], 
 
 # TODO: Add ability to handle more than one feed at once
 class FeedHandler:
-    def __init__(self, bot, channel_id, sub, limit, current, webhook):
+    def __init__(self, bot, sub, limit, current, ctx):
         self.bot = bot
-        self.channel_id = channel_id
+        self.ctx = ctx
+        self.channel_id = ctx.channel.id
         self.sub = None
-        self.icon = {}
+        self.icon = None
         self.upvote_limit = limit
-        self.webhook = discord.Webhook.from_url(webhook, adapter=discord.AsyncWebhookAdapter(bot.session))
         self.currently_checking = {}  # type: dict[str, asyncio.Task]
         self.timer = self.loop.create_task(self.auto_handler_task(sub))
+        self.webhook = discord.Webhook.from_url(await self.check_webhook(sub),
+                                                adapter=discord.AsyncWebhookAdapter(bot.session))
+
         for sub in current:
             if self.upvote_limit == 0:  # 0 = don't bother checking
                 self.loop.create_task(self.dispatch(sub))
@@ -72,6 +75,16 @@ class FeedHandler:
             if task:
                 task.cancel()
 
+    async def check_webhook(self, sub):
+        # Maya I'm so sorry
+        webhook = discord.utils.get(await self.ctx.channel.webhooks(), name=f"/r/{sub}")
+
+        if webhook is None:
+            webhook = await self.ctx.channel.create_webhook(name=f"/r/{sub}",
+                                                            avatar=self.icon[self.sub.display_name])
+
+        return webhook
+
     def get_community_icon(self):
         o = urlparse(self.sub.community_icon)
         return f"{o.scheme}://{o.netloc}{o.path}"
@@ -82,8 +95,8 @@ class FeedHandler:
         embed = discord.Embed(colour=discord.Colour.blue(), title=submit.title,
                               url=f"https://reddit.com{submit.permalink}",
                               timestamp=datetime.datetime.utcfromtimestamp(int(submit.created_utc)))
-        self.icon[self.sub.display_name] = self.sub.icon_img or self.get_community_icon()
-        embed.set_author(icon_url=self.icon[self.sub.display_name],
+        self.icon = self.sub.icon_img or self.get_community_icon()
+        embed.set_author(icon_url=self.icon,
                          url=f"https://reddit.com/r/{self.sub.display_name}",
                          name=f"/r/{self.sub.display_name}")
         embed.set_footer(text=f"/u/{submit.author.name}")
@@ -152,14 +165,7 @@ class Reddit(commands.Cog):
                 await ctx.send("Unknown subreddit! :c")
                 return
 
-        # Maya I'm so sorry
-        webhook = {
-            webhook.name: webhook
-            for webhook in await ctx.channel.webhooks()
-        }.get(f"/r/{sub}", await ctx.channel.create_webhook(name=f"/r/{sub}"))
-
-        feed = FeedHandler(self.bot, ctx.channel.id, sub,
-                           limit=options['upvote_limit'], current=[], webhook=webhook.url)
+        feed = FeedHandler(self.bot, sub, limit=options['upvote_limit'], current=[], ctx=ctx)
 
         if feed in [feed for feed in self.feeds[ctx.channel.id]]:
             await ctx.send("This subreddit is already being fed here!")
