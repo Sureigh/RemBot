@@ -19,12 +19,10 @@ class FeedHandler:
         self.ctx = ctx
         self.channel_id = ctx.channel.id
         self.sub = None
-        self.icon = None
+        self.webhook = None
         self.upvote_limit = limit
         self.currently_checking = {}  # type: dict[str, asyncio.Task]
         self.timer = self.loop.create_task(self.auto_handler_task(sub))
-        self.webhook = discord.Webhook.from_url(await self.check_webhook(sub),
-                                                adapter=discord.AsyncWebhookAdapter(bot.session))
 
         for sub in current:
             if self.upvote_limit == 0:  # 0 = don't bother checking
@@ -75,13 +73,13 @@ class FeedHandler:
             if task:
                 task.cancel()
 
-    async def check_webhook(self, sub):
+    async def check_webhook(self, sub, icon):
         # Maya I'm so sorry
         webhook = discord.utils.get(await self.ctx.channel.webhooks(), name=f"/r/{sub}")
 
         if webhook is None:
             webhook = await self.ctx.channel.create_webhook(name=f"/r/{sub}",
-                                                            avatar=self.icon[self.sub.display_name])
+                                                            avatar=icon)
 
         return webhook
 
@@ -95,8 +93,8 @@ class FeedHandler:
         embed = discord.Embed(colour=discord.Colour.blue(), title=submit.title,
                               url=f"https://reddit.com{submit.permalink}",
                               timestamp=datetime.datetime.utcfromtimestamp(int(submit.created_utc)))
-        self.icon = self.sub.icon_img or self.get_community_icon()
-        embed.set_author(icon_url=self.icon,
+        icon = self.sub.icon_img or self.get_community_icon()
+        embed.set_author(icon_url=icon,
                          url=f"https://reddit.com/r/{self.sub.display_name}",
                          name=f"/r/{self.sub.display_name}")
         embed.set_footer(text=f"/u/{submit.author.name}")
@@ -105,20 +103,12 @@ class FeedHandler:
         if submit.selftext:
             embed.description = submit.selftext[:2040] + "..."
         try:
+            self.webhook = discord.Webhook.from_url(await self.check_webhook(sub, icon),
+                                                    adapter=discord.AsyncWebhookAdapter(self.bot.session))
             await self.webhook.send(embed=embed)
-        except discord.NotFound:  # webhook was deleted
-            if self.channel is None:  # channel was deleted
-                self.timer.cancel()
-                return
-            try:
-                self.webhook = {
-                    webhook.name: webhook
-                    for webhook in await self.channel.webhooks()
-                }.get(f"/r/{sub}", await self.channel.create_webhook(name=f"/r/{sub}"))
-                await self.dispatch(sub)
-            except discord.Forbidden:  # no perms to make a new webhook
-                self.timer.cancel()
-                return
+        except discord.Forbidden:  # no perms to make a new webhook
+            self.timer.cancel()
+            return
         except Exception as e:
             print("Error occurred whilst dispatching", file=sys.stderr)
             traceback.print_exception(type(e), e, e.__traceback__)
