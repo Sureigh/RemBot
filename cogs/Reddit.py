@@ -70,7 +70,7 @@ class FeedHandler:
                 print(f"Received submission: /r/{sub}/comments/{submission}")
                 sub_id = submission.id
                 if self.image_check(submission):
-                    print(f"Skipped non-image post /r/{sub}/comments/{submission}")
+                    print(f"Skipped non-image post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
                 if self.upvote_limit == 0:
                     await self.dispatch(sub_id)
@@ -118,7 +118,7 @@ class FeedHandler:
 
     def get_community_icon(self):
         o = urlparse(self.sub.community_icon)
-        return f"{o.scheme}://{o.netloc}{o.path}"
+        return f"{o.scheme}://{o.netloc}{o.path}" if o.scheme else ""
 
     async def dispatch(self, sub):
         print(f"Dispatching /r/{self.sub.display_name}/comments/{sub}")
@@ -126,7 +126,7 @@ class FeedHandler:
         embed = discord.Embed(colour=discord.Colour.blue(), title=submit.title,
                               url=f"https://reddit.com{submit.permalink}",
                               timestamp=datetime.datetime.utcfromtimestamp(int(submit.created_utc)))
-        icon = self.sub.icon_img or self.get_community_icon()
+        icon = self.sub.icon_img or self.get_community_icon() or embed.Empty
         embed.set_author(url=f"https://reddit.com/r/{self.sub.display_name}",
                          name=f"/r/{self.sub.display_name}",
                          icon_url=icon)
