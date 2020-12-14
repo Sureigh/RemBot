@@ -1,5 +1,6 @@
 from config import reddit
 import asyncpraw
+import asyncprawcore.exceptions
 from discord.ext import commands, flags
 import discord
 import json
@@ -8,58 +9,98 @@ import sys
 import traceback
 import datetime
 from urllib.parse import urlparse
+import collections
 
 praw = asyncpraw.Reddit(client_id=reddit['id'], client_secret=reddit['secret'], user_agent="RemBot by /u/IBOSSWOLF")
 
 
-# TODO: Add ability to handle more than one feed at once
+# TODO: Make one FeedHandler object handle multiple channels(?)
 class FeedHandler:
-    def __init__(self, bot, sub, limit, current, ctx):
+    def __init__(self, bot, channel_id, *, sub, current, webhook, upvote_limit=0, image_only=False, attempts=12):
+        self._sub_name = sub
         self.bot = bot
-        self.ctx = ctx
-        self.channel_id = ctx.channel.id
+        self.channel_id = channel_id
         self.sub = None
-        self.webhook = None
-        self.upvote_limit = limit
+        self.webhook = discord.Webhook.from_url(webhook, adapter=discord.AsyncWebhookAdapter(bot.session))
         self.currently_checking = {}  # type: dict[str, asyncio.Task]
         self.timer = self.loop.create_task(self.auto_handler_task(sub))
 
+        self.flags = {"upvote_limit": upvote_limit,
+                      "image_only": image_only,
+                      "attempts": attempts}
+
         for sub in current:
-            if self.upvote_limit == 0:  # 0 = don't bother checking
+            if upvote_limit == 0:  # 0 = don't bother checking
                 self.loop.create_task(self.dispatch(sub))
             else:
                 self.currently_checking[sub] = self.loop.create_task(self.check(sub))
 
+    @property
+    def upvote_limit(self):
+        return self.flags['upvote_limit']
+
+    @property
+    def image_only(self):
+        return self.flags['image_only']
+
+    @property
+    def attempts(self):
+        return self.flags['attempts']
+
     def __repr__(self):
-        return (f"FeedHandler({self.channel_id}, {self.sub}, {self.upvote_limit}, {self.currently_checking}, "
-                f"{self.webhook.url})")
+        return (f"FeedHandler({self.channel.id}, {self.sub}, {self.currently_checking.keys()}"
+                f"{self.flags})")
+
+    def __eq__(self, other):
+        return all([isinstance(other, self.__class__),
+                    self.channel == other.channel,
+                    self._sub_name == other._sub_name])
+
+    def image_check(self, submission):
+        return self.image_only and not submission.url.endswith((".jpg", ".png", ".jpeg", ".webp", ".webm", ".gif",
+                                                                ".gifv"))
 
     async def auto_handler_task(self, sub):
         self.sub = await praw.subreddit(sub)
         await self.sub.load()
         await self.bot.wait_until_ready()
+        print(f"Awaiting submissions in /r/{sub}")
         try:
             async for submission in self.sub.stream.submissions(skip_existing=True):
                 print(f"Received submission: /r/{sub}/comments/{submission}")
-                sub = submission.id
+                sub_id = submission.id
+                if self.image_check(submission):
+                    print(f"Skipped non-image post /r/{sub}/comments/{submission}")
+                    continue
                 if self.upvote_limit == 0:
-                    await self.dispatch(sub)
+                    await self.dispatch(sub_id)
                 else:
-                    self.currently_checking[sub] = self.loop.create_task(self.check(sub))
+                    self.currently_checking[sub_id] = self.loop.create_task(self.check(sub_id))
                 await asyncio.sleep(10)
+        except asyncprawcore.exceptions.RequestException as e:
+            print("Caught exception", e, e.__cause__)
+            if isinstance(e.__cause__, asyncio.TimeoutError):
+                print("Timed out fetching submissions. Restarting...", file=sys.stderr)
+                self.timer = self.loop.create_task(self.auto_handler_task(sub))
+            else:
+                print("Error occurred during automatic handler:", file=sys.stderr)
+                traceback.print_exception(type(e), e, e.__traceback__)
         except Exception as e:
             print("Error occurred during automatic handler:", file=sys.stderr)
             traceback.print_exception(type(e), e, e.__traceback__)
 
-    async def check(self, sub):
+    async def check(self, sub_name):
+        sub = await praw.submission(id=sub_name)
+        if self.image_check(sub):
+            print(f"Ignoring non-image submission {sub}")
+            return  # skipped!
         await self.bot.wait_until_ready()
-        tries = 12
+        tries = self.attempts
         try:
             while tries:
-                sub = await praw.submission(id=sub)
                 await sub.load()
                 print(f"Checking if /r/{self.sub.display_name}/comments/{sub} has reached upvote threshold "
-                      f"({sub.score}/{self.upvote_limit}) ({12 - tries} attempts remaining)")
+                      f"({sub.score}/{self.upvote_limit}) ({tries} attempts remaining)")
                 if sub.score >= self.upvote_limit:
                     await self.dispatch(sub)
                     break
@@ -68,20 +109,12 @@ class FeedHandler:
         except Exception as e:
             print("Error occurred during periodic updater:")
             traceback.print_exception(type(e), e, e.__traceback__)
+        else:
+            print(f"/r/{self.sub.display_name}/comments/{sub} did not reach the upvote threshold. Disposing...")
         finally:
-            task = self.currently_checking.pop(sub, None)
+            task = self.currently_checking.pop(sub_name, None)
             if task:
                 task.cancel()
-
-    async def check_webhook(self, sub, icon):
-        # Maya I'm so sorry
-        webhook = discord.utils.get(await self.ctx.channel.webhooks(), name=f"/r/{sub}")
-
-        if webhook is None:
-            webhook = await self.ctx.channel.create_webhook(name=f"/r/{sub}",
-                                                            avatar=icon)
-
-        return webhook
 
     def get_community_icon(self):
         o = urlparse(self.sub.community_icon)
@@ -94,21 +127,33 @@ class FeedHandler:
                               url=f"https://reddit.com{submit.permalink}",
                               timestamp=datetime.datetime.utcfromtimestamp(int(submit.created_utc)))
         icon = self.sub.icon_img or self.get_community_icon()
-        embed.set_author(icon_url=icon,
-                         url=f"https://reddit.com/r/{self.sub.display_name}",
-                         name=f"/r/{self.sub.display_name}")
+        embed.set_author(url=f"https://reddit.com/r/{self.sub.display_name}",
+                         name=f"/r/{self.sub.display_name}",
+                         icon_url=icon)
         embed.set_footer(text=f"/u/{submit.author.name}")
         if submit.url.endswith((".jpg", ".png", ".jpeg", ".webp", ".webm", ".gif", ".gifv")):
             embed.set_image(url=submit.url)
         if submit.selftext:
-            embed.description = submit.selftext[:2040] + "..."
+            if len(submit.selftext) > 2048:
+                embed.description = submit.selftext[:2040] + "..."
+            else:
+                embed.description = submit.selftext
         try:
-            self.webhook = discord.Webhook.from_url(await self.check_webhook(sub, icon),
-                                                    adapter=discord.AsyncWebhookAdapter(self.bot.session))
             await self.webhook.send(embed=embed)
-        except discord.Forbidden:  # no perms to make a new webhook
-            self.timer.cancel()
-            return
+        except discord.NotFound:
+            if self.channel is None:
+                # TODO: channel was deleted, find a way to remove this feed from the database
+                self.timer.cancel()
+                return
+            try:
+                webhook = discord.utils.get(await self.channel.webhooks(), name=f'/r/{self.sub.display_name}')
+                if webhook is None:
+                    webhook = await self.channel.create_webhook(name=f'/r/{self.sub.display_name}')
+                self.webhook = webhook
+                await webhook.send(embed=embed)
+            except discord.Forbidden:  # no perms to fetch/create a webhook
+                self.timer.cancel()
+                return
         except Exception as e:
             print("Error occurred whilst dispatching", file=sys.stderr)
             traceback.print_exception(type(e), e, e.__traceback__)
@@ -122,49 +167,80 @@ class FeedHandler:
         return self.bot.get_channel(self.channel_id)
 
     def to_json(self):
-        return {"sub": self.sub, "limit": self.upvote_limit,
+        return {"sub": self.sub.display_name, "upvote_limit": self.upvote_limit,
                 "current": [sub for sub in self.currently_checking],
-                "webhook": self.webhook.url}
+                "webhook": self.webhook.url, "image_only": self.image_only,
+                "attempts": self.attempts}
 
 
 class Reddit(commands.Cog):
-    """Base cog for auto-reddit feed related commands."""
-
     def __init__(self, bot):
         self.bot = bot
-        self.feeds = {}  # type: dict[int, list[FeedHandler]]
+        self.feeds = collections.defaultdict(dict)  # type: dict[int, dict[str, FeedHandler]]
         bot.loop.run_until_complete(self.prepare_auto_feeds())
+        # TODO: find a way to allow reloading of this cog (bot.is_ready?)
 
     async def prepare_auto_feeds(self):
         # TODO: use a database
         with open("feeds.json") as f:
             feeds = json.load(f)
         for i, data in feeds.items():
-            self.feeds[int(i)].append(FeedHandler(self.bot, int(i), **data))
+            for sub in data:
+                self.feeds[int(i)][sub] = FeedHandler(self.bot, int(i), **data[sub])
 
-    # TODO: Don't forget to implement --image-only
+    @commands.group()
+    async def reddit(self, ctx):
+        """Base cog for auto-reddit feed related commands."""
+        pass
+
     @flags.add_flag("-u", "--upvote-limit", type=int,
                     help="The required amount of upvotes before dispatching.", default=0)
+    @flags.add_flag('-i', "--image-only", action="store_true", default=False, help="Only send image posts.")
+    @flags.add_flag('-a', "--attempts", type=int, help="Total attempts to allow when checking for upvotes.", default=12)
     @reddit.command(cls=flags.FlagCommand)
     @commands.has_permissions(manage_channels=True, manage_webhooks=True)
     @commands.bot_has_permissions(manage_webhooks=True)
-    async def new(self, ctx, sub, **options):
-        """Creates a new reddit feed."""
+    async def feed(self, ctx, sub, **options):
+        """Creates a new reddit feed, or modifies an existing one."""
+        await ctx.channel.trigger_typing()
         async with self.bot.session.get(f"https://reddit.com/r/{sub}.json") as f:
             if f.status != 200:
                 await ctx.send("Unknown subreddit! :c")
                 return
 
-        feed = FeedHandler(self.bot, sub, limit=options['upvote_limit'], current=[], ctx=ctx)
+        webhook = discord.utils.find(lambda w: w.name.lower() == f'/r/{sub.lower()}', await ctx.channel.webhooks())
+        if webhook is None:
+            print("No webhook found, making new")
+            subreddit = await praw.subreddit(sub)
+            await subreddit.load()
+            async with self.bot.session.get(subreddit.icon_img or subreddit.community_icon) as g:
+                img = await g.read()
+            webhook = await ctx.channel.create_webhook(name=f'/r/{subreddit.display_name}', avatar=img)
+            print("Created")
 
-        if feed in [feed for feed in self.feeds[ctx.channel.id]]:
-            await ctx.send("This subreddit is already being fed here!")
+        if sub in self.feeds[ctx.channel.id].keys():
+            print(f"Existing feed {sub!r} detected")
+            msg = (f"A feed for /r/{sub} already existed here, so we've updated the feed...\n"
+                   "With the following flags:\n```")
+            for k, v in options.items():
+                self.feeds[ctx.channel.id][sub].flags[k] = v
+                msg += f"\n{k}: {v}"
+            msg += '\n```'
+            await ctx.send(msg)
             return
+        print(f"Creating a new feed {sub!r}")
 
-        self.feeds[ctx.channel.id].append(feed)
+        feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
 
-        # TODO: Show flags and their settings if commands were invoked with flags
-        await ctx.send("Done! You should now get express images straight from Reddit!~")
+        self.feeds[ctx.channel.id][sub] = feed
+
+        msg = (f"Done! You should now get express images straight from /r/{sub}!~\n"
+                "With the following flags:\n```")
+        for k, v in options.items():
+            msg += f"\n{k}: {v}"
+        msg += "```"
+
+        await ctx.send(msg) # maya and sleigh are a big cutie btw uwu
 
 
 def setup(bot):

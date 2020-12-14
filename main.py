@@ -45,12 +45,18 @@ class Rem(commands.Bot):
 		print("Ready!", self.user.name, self.user.id)
 
 	async def close(self):
+		print("Closing")
 		cog = self.get_cog("Reddit")
-		with open("feeds.json", "w") as f:
-			json.dump({
-				i: s.to_json()
-				for i, s in cog.feeds.items()
-			}, f, indent=2, sort_keys=True)
+		if cog:
+			print("Dumping feeds...")
+			with open("feeds.json", "w") as f:
+				json.dump({
+					i: {
+						k: v.to_json()
+						for k, v in s.items()
+					}
+					for i, s in cog.feeds.items()
+				}, f, indent=2, sort_keys=True)
 
 		if self.session:
 			await self.session.close()
