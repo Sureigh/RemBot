@@ -204,7 +204,7 @@ class Reddit(commands.Cog):
     @reddit.command(cls=flags.FlagCommand)
     @commands.has_permissions(manage_channels=True, manage_webhooks=True)
     @commands.bot_has_permissions(manage_webhooks=True)
-    async def feed(self, ctx, sub, **options):
+    async def feed(self, ctx, sub: str.lower, **options):
         """Creates a new reddit feed, or modifies an existing one."""
         await ctx.channel.trigger_typing()
         async with self.bot.session.get(f"https://reddit.com/r/{sub}.json") as f:
@@ -229,11 +229,11 @@ class Reddit(commands.Cog):
             for k, v in options.items():
                 self.feeds[ctx.channel.id][sub].flags[k] = v
                 msg += f"\n{k}: {v}"
-            msg += '\n```'
+            msg += "```"
             await ctx.send(msg)
             return
-        print(f"Creating a new feed {sub!r}")
 
+        print(f"Creating a new feed {sub!r}")
         feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
 
         feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
@@ -241,13 +241,28 @@ class Reddit(commands.Cog):
         self.feeds[ctx.channel.id][sub] = feed
 
         msg = (f"Done! You should now get express images straight from /r/{sub}!~\n"
-                "With the following flags:\n```")
+               "With the following flags:\n```")
         for k, v in options.items():
             msg += f"\n{k}: {v}"
         msg += "```"
 
-        await ctx.send(msg) # maya and sleigh are a big cutie btw uwu
+        await ctx.send(msg)  # maya and sleigh are a big cutie btw uwu
 
+    # TODO: Hey we should clean up webhooks lol
+    @reddit.command()
+    async def remove(self, ctx, sub: str.lower):
+        """Removes an auto-reddit feed."""
+        feed = self.feeds[ctx.channel.id].pop(sub)
+
+        if feed is None:
+            await ctx.send("This feed doesn't seem to exist... Are you sure you typed in the right subreddit name?")
+            return
+
+        for task in feed.currently_checking.values():
+            task.cancel()
+        feed.timer.cancel()
+
+        await ctx.send(f"Okay! Removed /r/{sub} from your feeds.")
 
 def setup(bot):
     bot.add_cog(Reddit(bot))
