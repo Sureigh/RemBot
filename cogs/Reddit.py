@@ -29,10 +29,6 @@ class FeedHandler:
                       "image_only": image_only,
                       "attempts": attempts}
 
-        self.flags = {"upvote_limit": upvote_limit,
-                      "image_only": image_only,
-                      "attempts": attempts}
-
         for sub in current:
             if upvote_limit == 0:  # 0 = don't bother checking
                 self.loop.create_task(self.dispatch(sub))
@@ -217,8 +213,11 @@ class Reddit(commands.Cog):
             print("No webhook found, making new")
             subreddit = await praw.subreddit(sub)
             await subreddit.load()
-            async with self.bot.session.get(subreddit.icon_img or subreddit.community_icon) as g:
-                img = await g.read()
+            if subreddit.icon_img or subreddit.community_icon:
+                async with self.bot.session.get(subreddit.icon_img or subreddit.community_icon) as g:
+                    img = await g.read()
+            else:
+                img = None
             webhook = await ctx.channel.create_webhook(name=f'/r/{subreddit.display_name}', avatar=img)
             print("Created")
 
@@ -234,8 +233,6 @@ class Reddit(commands.Cog):
             return
 
         print(f"Creating a new feed {sub!r}")
-        feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
-
         feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
 
         self.feeds[ctx.channel.id][sub] = feed
