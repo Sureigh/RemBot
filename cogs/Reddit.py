@@ -29,6 +29,10 @@ class FeedHandler:
                       "image_only": image_only,
                       "attempts": attempts}
 
+        self.flags = {"upvote_limit": upvote_limit,
+                      "image_only": image_only,
+                      "attempts": attempts}
+
         for sub in current:
             if upvote_limit == 0:  # 0 = don't bother checking
                 self.loop.create_task(self.dispatch(sub))
@@ -229,6 +233,8 @@ class Reddit(commands.Cog):
             await ctx.send(msg)
             return
         print(f"Creating a new feed {sub!r}")
+
+        feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
 
         feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
 
