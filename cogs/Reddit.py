@@ -69,10 +69,6 @@ class FeedHandler:
         await self.bot.wait_until_ready()
         print(f"Awaiting submissions in /r/{sub}")
 
-        # NSFW Check: If subreddit is NSFW, you are sent to horny jail
-        if not self.channel.is_nsfw() and self.sub.over18:
-            raise commands.NSFWChannelRequired(self.channel)
-
         try:
             # Submission checking
             async for submission in self.sub.stream.submissions(skip_existing=True):
@@ -233,22 +229,28 @@ class Reddit(commands.Cog):
                 await ctx.send("Unknown subreddit! :c")
                 return
 
+        _sub = await praw.subreddit(sub)
+        await _sub.load()
+
+        # NSFW Check: If subreddit is NSFW, you are sent to horny jail
+        if not ctx.channel.is_nsfw() and _sub.over18:
+            await ctx.send("Error: This subreddit is NSFW! Please make sure this channel is marked as NSFW first.")
+            return
+
         webhook = discord.utils.find(lambda w: w.name.lower() == f'/r/{sub.lower()}', await ctx.channel.webhooks())
         if webhook is None:
             print("No webhook found, making new")
-            subreddit = await praw.subreddit(sub)
-            await subreddit.load()
-            if subreddit.icon_img or subreddit.community_icon:
-                async with self.bot.session.get(subreddit.icon_img or subreddit.community_icon) as g:
+            if _sub.icon_img or _sub.community_icon:
+                async with self.bot.session.get(_sub.icon_img or _sub.community_icon) as g:
                     img = await g.read()
             else:
                 img = None
-            webhook = await ctx.channel.create_webhook(name=f'/r/{subreddit.display_name}', avatar=img)
+            webhook = await ctx.channel.create_webhook(name=f'/r/{_sub.display_name}', avatar=img)
             print("Created")
 
         if sub in self.feeds[ctx.channel.id].keys():
-            print(f"Existing feed {sub!r} detected")
-            msg = (f"A feed for /r/{sub} already existed here, so we've updated the feed...\n"
+            print(f"Existing feed {_sub.display_name} detected")
+            msg = (f"A feed for /r/{_sub.display_name} already existed here, so we've updated the feed...\n"
                    "With the following flags:\n```")
             for k, v in options.items():
                 self.feeds[ctx.channel.id][sub].flags[k] = v
@@ -257,17 +259,12 @@ class Reddit(commands.Cog):
             await ctx.send(msg)
             return
 
-        print(f"Creating a new feed {sub!r}")
-        try:
-            feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
-        # TODO: Can we have cool error handler with embeds n stuff pls k ty sweetheart luv u
-        except commands.NSFWChannelRequired:
-            await ctx.send("Error: This subreddit is NSFW! Please make sure this channel is marked as NSFW first.")
-            return
+        print(f"Creating a new feed {_sub.display_name}")
+        feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
 
         self.feeds[ctx.channel.id][sub] = feed
 
-        msg = (f"Done! You should now get express images straight from /r/{sub}!~\n"
+        msg = (f"Done! You should now get express images straight from /r/{_sub.display_name}!~\n"
                "With the following flags:\n```")
         for k, v in options.items():
             msg += f"\n{k}: {v}"
