@@ -70,7 +70,7 @@ class FeedHandler:
         print(f"Awaiting submissions in /r/{sub}")
 
         # NSFW Check: If subreddit is NSFW, you are sent to horny jail
-        if not self.channel.is_nsfw() and self.sub.over_18:
+        if not self.channel.is_nsfw() and self.sub.over18:
             raise commands.NSFWChannelRequired(self.channel)
 
         try:
