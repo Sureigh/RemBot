@@ -1,3 +1,5 @@
+import aiohttp
+
 from config import reddit
 import asyncpraw
 import asyncprawcore.exceptions
@@ -82,6 +84,9 @@ class FeedHandler:
             if isinstance(e.__cause__, asyncio.TimeoutError):
                 print("Timed out fetching submissions. Restarting...", file=sys.stderr)
                 self.timer = self.loop.create_task(self.auto_handler_task(sub))
+            elif isinstance(e.__cause__, aiohttp.ClientOSError) and e.__cause__.errno == 104:
+                print("Disconnected while fetching. Restarting...", file=sys.stderr)
+                self.timer = self.loop.create_task(self.auto_handler_task(sub))
             else:
                 print("Error occurred during automatic handler:", file=sys.stderr)
                 traceback.print_exception(type(e), e, e.__traceback__)
@@ -123,7 +128,11 @@ class FeedHandler:
     async def dispatch(self, sub):
         print(f"Dispatching /r/{self.sub.display_name}/comments/{sub}")
         submit = await praw.submission(id=sub)
-        embed = discord.Embed(colour=discord.Colour.blue(), title=submit.title,
+        if len(submit.title) > 250:
+            title = submit.title[:250] + '...'
+        else:
+            title = submit.title
+        embed = discord.Embed(colour=discord.Colour.blue(), title=title,
                               url=f"https://reddit.com{submit.permalink}",
                               timestamp=datetime.datetime.utcfromtimestamp(int(submit.created_utc)))
         icon = self.sub.icon_img or self.get_community_icon() or embed.Empty
