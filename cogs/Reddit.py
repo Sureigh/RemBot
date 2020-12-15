@@ -203,9 +203,9 @@ class Reddit(commands.Cog):
         pass
 
     @flags.add_flag("-u", "--upvote-limit", type=int,
-                    help="The required amount of upvotes before dispatching.", default=0)
-    @flags.add_flag('-i', "--image-only", action="store_true", default=False, help="Only send image posts.")
-    @flags.add_flag('-a', "--attempts", type=int, help="Total attempts to allow when checking for upvotes.", default=12)
+                    help="The required amount of upvotes before dispatching.")
+    @flags.add_flag('-i', "--image-only", action="store_true", help="Only send image posts.")
+    @flags.add_flag('-a', "--attempts", type=int, help="Total attempts to allow when checking for upvotes.")
     @reddit.command(cls=flags.FlagCommand)
     @commands.has_permissions(manage_channels=True, manage_webhooks=True)
     @commands.bot_has_permissions(manage_webhooks=True)
@@ -264,8 +264,7 @@ class Reddit(commands.Cog):
             await ctx.send("This feed doesn't seem to exist... Are you sure you typed in the right subreddit name?")
             return
 
-        for task in feed.currently_checking.values():
-            task.cancel()
+        [task.cancel() for task in feed.currently_checking.values()]
         feed.timer.cancel()
 
         await ctx.send(f"Okay! Removed /r/{sub} from your feeds.")
