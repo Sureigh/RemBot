@@ -19,7 +19,7 @@ praw = asyncpraw.Reddit(client_id=reddit['id'], client_secret=reddit['secret'], 
 # TODO: Make one FeedHandler object handle multiple channels(?)
 class FeedHandler:
     def __init__(self, bot, channel_id, *, sub, current, webhook,
-                 upvote_limit=0, image_only=False, attempts=12):
+                 upvote_limit=0, image_only=False, attempts=12, keywords=list):
         self._sub_name = sub
         self.bot = bot
         self.channel_id = channel_id
@@ -30,7 +30,8 @@ class FeedHandler:
 
         self.flags = {"upvote_limit": upvote_limit,
                       "image_only": image_only,
-                      "attempts": attempts}
+                      "attempts": attempts,
+                      "keywords": keywords}
 
         for sub in current:
             if upvote_limit == 0:  # 0 = don't bother checking
@@ -49,6 +50,10 @@ class FeedHandler:
     @property
     def attempts(self):
         return self.flags['attempts']
+
+    @property
+    def keywords(self):
+        return self.flags['keywords']
 
     def __repr__(self):
         return (f"FeedHandler({self.channel.id}, {self.sub}, {self.currently_checking.keys()}"
@@ -77,11 +82,15 @@ class FeedHandler:
 
                 # No NSFW
                 if not self.channel.is_nsfw() and submission.over_18:
-                    print(f"Skipped NSFW post /r/{sub}/comments/{submission} ({submission.url})")
+                    print(f"[NSFW] Skipped NSFW post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
                 # Image only
                 if self.image_check(submission):
-                    print(f"Skipped non-image post /r/{sub}/comments/{submission} ({submission.url})")
+                    print(f"[Image] Skipped non-image post /r/{sub}/comments/{submission} ({submission.url})")
+                    continue
+                # Keywords
+                if not any(word.lower() in submission.name.lower() for word in self.keywords):
+                    print(f"[Keyword] Skipped non-relevant post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
                 # Upvote limit
                 if self.upvote_limit == 0:
@@ -190,7 +199,7 @@ class FeedHandler:
         return {"sub": self.sub.display_name, "upvote_limit": self.upvote_limit,
                 "current": [sub for sub in self.currently_checking],
                 "webhook": self.webhook.url, "image_only": self.image_only,
-                "attempts": self.attempts}
+                "attempts": self.attempts, "keywords": self.keywords}
 
 
 class Reddit(commands.Cog):
@@ -213,6 +222,8 @@ class Reddit(commands.Cog):
         """Base cog for auto-reddit feed related commands."""
         pass
 
+    @flags.add_flag("-k", "--keywords", type=str.split(", "),
+                    help="The keywords required before dispatching.")
     @flags.add_flag("-u", "--upvote-limit", type=int,
                     help="The required amount of upvotes before dispatching.")
     @flags.add_flag('-i', "--image-only", action="store_true", help="Only send image posts.")
@@ -237,7 +248,7 @@ class Reddit(commands.Cog):
             await ctx.send("Error: This subreddit is NSFW! Please make sure this channel is marked as NSFW first.")
             return
 
-        webhook = discord.utils.find(lambda w: w.name.lower() == f'/r/{sub.lower()}', await ctx.channel.webhooks())
+        webhook = discord.utils.find(lambda w: w.name.lower() == f'/r/{sub}', await ctx.channel.webhooks())
         if webhook is None:
             print("No webhook found, making new")
             if _sub.icon_img or _sub.community_icon:
