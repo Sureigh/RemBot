@@ -279,9 +279,9 @@ class Reddit(commands.Cog):
     @reddit.command()
     async def remove(self, ctx, sub: str.lower):
         """Removes an auto-reddit feed."""
-        feed = self.feeds[ctx.channel.id].pop(sub)
-
-        if feed is None:
+        try:
+            feed = self.feeds[ctx.channel.id].pop(sub)
+        except KeyError:
             await ctx.send("This feed doesn't seem to exist... Are you sure you typed in the right subreddit name?")
             return
 
