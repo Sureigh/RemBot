@@ -18,7 +18,8 @@ praw = asyncpraw.Reddit(client_id=reddit['id'], client_secret=reddit['secret'], 
 
 # TODO: Make one FeedHandler object handle multiple channels(?)
 class FeedHandler:
-    def __init__(self, bot, channel_id, *, sub, current, webhook, upvote_limit=0, image_only=False, attempts=12):
+    def __init__(self, bot, channel_id, *, sub, current, webhook,
+                 upvote_limit=0, image_only=False, attempts=12):
         self._sub_name = sub
         self.bot = bot
         self.channel_id = channel_id
@@ -67,17 +68,31 @@ class FeedHandler:
         await self.sub.load()
         await self.bot.wait_until_ready()
         print(f"Awaiting submissions in /r/{sub}")
+
+        # NSFW Check: If subreddit is NSFW, you are sent to horny jail
+        if not self.channel.is_nsfw() and self.sub.over_18:
+            raise commands.NSFWChannelRequired(self.channel)
+
         try:
+            # Submission checking
             async for submission in self.sub.stream.submissions(skip_existing=True):
                 print(f"Received submission: /r/{sub}/comments/{submission}")
                 sub_id = submission.id
+
+                # No NSFW
+                if not self.channel.is_nsfw() and submission.over_18:
+                    print(f"Skipped NSFW post /r/{sub}/comments/{submission} ({submission.url})")
+                    continue
+                # Image only
                 if self.image_check(submission):
                     print(f"Skipped non-image post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
+                # Upvote limit
                 if self.upvote_limit == 0:
                     await self.dispatch(sub_id)
                 else:
                     self.currently_checking[sub_id] = self.loop.create_task(self.check(sub_id))
+
                 await asyncio.sleep(10)
         except asyncprawcore.exceptions.RequestException as e:
             print("Caught exception", e, e.__cause__)
@@ -212,6 +227,7 @@ class Reddit(commands.Cog):
     async def feed(self, ctx, sub: str.lower, **options):
         """Creates a new reddit feed, or modifies an existing one."""
         await ctx.channel.trigger_typing()
+
         async with self.bot.session.get(f"https://reddit.com/r/{sub}.json") as f:
             if f.status != 200:
                 await ctx.send("Unknown subreddit! :c")
@@ -242,7 +258,12 @@ class Reddit(commands.Cog):
             return
 
         print(f"Creating a new feed {sub!r}")
-        feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
+        try:
+            feed = FeedHandler(self.bot, ctx.channel.id, sub=sub, current=[], webhook=webhook.url, **options)
+        # TODO: Can we have cool error handler with embeds n stuff pls k ty sweetheart luv u
+        except commands.NSFWChannelRequired:
+            await ctx.send("Error: This subreddit is NSFW! Please make sure this channel is marked as NSFW first.")
+            return
 
         self.feeds[ctx.channel.id][sub] = feed
 
