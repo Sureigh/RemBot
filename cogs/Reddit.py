@@ -92,7 +92,7 @@ class FeedHandler:
                     print(f"[Image] Skipped non-image post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
                 # Keywords
-                if not any(word.lower() in submission.name.lower() for word in self.keywords):
+                if self.keywords and not any(word.lower() in submission.name.lower() for word in self.keywords):
                     print(f"[Keyword] Skipped non-relevant post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
                 # Upvote limit
