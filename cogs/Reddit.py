@@ -20,6 +20,12 @@ praw = asyncpraw.Reddit(client_id=reddit['id'], client_secret=reddit['secret'], 
 class FeedHandler:
     def __init__(self, bot, channel_id, *, sub, current, webhook,
                  upvote_limit=0, image_only=False, attempts=12, keywords=None):
+        # Flags default value should be here
+        # P.S Argparse bad
+        if upvote_limit is None:
+            upvote_limit = 0
+        if attempts is None:
+            attempts = 12
         if keywords is None:
             keywords = []
 
@@ -225,17 +231,13 @@ class Reddit(commands.Cog):
         """Base cog for auto-reddit feed related commands."""
         pass
 
-    @flags.add_flag("-k", "--keywords",
-                    type=lambda x: x.split(", "), default=[],
+    @flags.add_flag("-k", "--keywords", type=lambda x: x.split(", "),
                     help="The keywords required before dispatching.")
-    @flags.add_flag("-u", "--upvote-limit",
-                    type=int, default=0,
+    @flags.add_flag("-u", "--upvote-limit", type=int,
                     help="The required amount of upvotes before dispatching.")
-    @flags.add_flag('-i', "--image-only",
-                    action="store_true",
+    @flags.add_flag('-i', "--image-only", action="store_true",
                     help="Only send image posts.")
-    @flags.add_flag('-a', "--attempts",
-                    type=int, default=12,
+    @flags.add_flag('-a', "--attempts", type=int,
                     help="Total attempts to allow when checking for upvotes.")
     @reddit.command(cls=flags.FlagCommand)
     @commands.has_permissions(manage_channels=True, manage_webhooks=True)
