@@ -222,7 +222,7 @@ class Reddit(commands.Cog):
         """Base cog for auto-reddit feed related commands."""
         pass
 
-    @flags.add_flag("-k", "--keywords", type=str.split(", "),
+    @flags.add_flag("-k", "--keywords", type=lambda x: x.split(", "),
                     help="The keywords required before dispatching.")
     @flags.add_flag("-u", "--upvote-limit", type=int,
                     help="The required amount of upvotes before dispatching.")
