@@ -246,6 +246,11 @@ class Reddit(commands.Cog):
         """Creates a new reddit feed, or modifies an existing one."""
         await ctx.channel.trigger_typing()
 
+        # If the flag value is None (which means, default values), it'll straight up delete the flag lmao
+        for k, v in options.items():
+            if v in [None, False]:
+                del options[k]
+
         async with self.bot.session.get(f"https://reddit.com/r/{sub}.json") as f:
             if f.status != 200:
                 await ctx.send("Unknown subreddit! :c")
@@ -272,12 +277,13 @@ class Reddit(commands.Cog):
 
         if sub in self.feeds[ctx.channel.id].keys():
             print(f"Existing feed {_sub.display_name} detected")
-            msg = (f"A feed for /r/{_sub.display_name} already existed here, so we've updated the feed...\n"
-                   "With the following flags:\n```")
-            for k, v in options.items():
-                self.feeds[ctx.channel.id][sub].flags[k] = v
-                msg += f"\n{k}: {v}"
-            msg += "```"
+            msg = f"A feed for /r/{_sub.display_name} already exists here."
+            if options:
+                msg += "\nSo, we've updated the feed with the following flags:\n```"
+                for k, v in options.items():
+                    self.feeds[ctx.channel.id][sub].flags[k] = v
+                    msg += f"\n{k}: {v}"
+                msg += "```"
             await ctx.send(msg)
             return
 
@@ -286,12 +292,12 @@ class Reddit(commands.Cog):
 
         self.feeds[ctx.channel.id][sub] = feed
 
-        msg = (f"Done! You should now get express images straight from /r/{_sub.display_name}!~\n"
-               "With the following flags:\n```")
-        for k, v in options.items():
-            msg += f"\n{k}: {v}"
-        msg += "```"
-
+        msg = f"Done! You should now get express images straight from /r/{_sub.display_name}!~\n"
+        if options:
+            msg += "With the following flags:\n```"
+            for k, v in options.items():
+                msg += f"\n{k}: {v}"
+            msg += "```"
         await ctx.send(msg)  # maya and sleigh are a big cutie btw uwu
 
     # TODO: Hey we should clean up webhooks lol
