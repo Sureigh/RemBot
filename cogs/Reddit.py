@@ -19,7 +19,10 @@ praw = asyncpraw.Reddit(client_id=reddit['id'], client_secret=reddit['secret'], 
 # TODO: Make one FeedHandler object handle multiple channels(?)
 class FeedHandler:
     def __init__(self, bot, channel_id, *, sub, current, webhook,
-                 upvote_limit=0, image_only=False, attempts=12, keywords=list):
+                 upvote_limit=0, image_only=False, attempts=12, keywords=None):
+        if keywords is None:
+            keywords = []
+
         self._sub_name = sub
         self.bot = bot
         self.channel_id = channel_id
