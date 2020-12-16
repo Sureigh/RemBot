@@ -247,9 +247,7 @@ class Reddit(commands.Cog):
         await ctx.channel.trigger_typing()
 
         # If the flag value is None (which means, default values), it'll straight up delete the flag lmao
-        for k, v in options.items():
-            if v in [None, False]:
-                del options[k]
+        options = {k: v for k, v in options if v not in [None, False]}
 
         async with self.bot.session.get(f"https://reddit.com/r/{sub}.json") as f:
             if f.status != 200:
