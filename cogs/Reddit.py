@@ -96,7 +96,7 @@ class FeedHandler:
                     print(f"[Keyword] Skipped non-relevant post /r/{sub}/comments/{submission} ({submission.url})")
                     continue
                 # Upvote limit
-                if self.upvote_limit == 0:
+                if not self.upvote_limit:
                     await self.dispatch(sub_id)
                 else:
                     self.currently_checking[sub_id] = self.loop.create_task(self.check(sub_id))
@@ -225,12 +225,18 @@ class Reddit(commands.Cog):
         """Base cog for auto-reddit feed related commands."""
         pass
 
-    @flags.add_flag("-k", "--keywords", type=lambda x: x.split(", "),
+    @flags.add_flag("-k", "--keywords",
+                    type=lambda x: x.split(", "), default=[],
                     help="The keywords required before dispatching.")
-    @flags.add_flag("-u", "--upvote-limit", type=int,
+    @flags.add_flag("-u", "--upvote-limit",
+                    type=int, default=0,
                     help="The required amount of upvotes before dispatching.")
-    @flags.add_flag('-i', "--image-only", action="store_true", help="Only send image posts.")
-    @flags.add_flag('-a', "--attempts", type=int, help="Total attempts to allow when checking for upvotes.")
+    @flags.add_flag('-i', "--image-only",
+                    action="store_true",
+                    help="Only send image posts.")
+    @flags.add_flag('-a', "--attempts",
+                    type=int, default=12,
+                    help="Total attempts to allow when checking for upvotes.")
     @reddit.command(cls=flags.FlagCommand)
     @commands.has_permissions(manage_channels=True, manage_webhooks=True)
     @commands.bot_has_permissions(manage_webhooks=True)
