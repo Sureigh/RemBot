@@ -119,6 +119,9 @@ class FeedHandler:
             else:
                 print("Error occurred during automatic handler:", file=sys.stderr)
                 traceback.print_exception(type(e), e, e.__traceback__)
+        except asyncio.TimeoutError:
+            print("Timed out fetching submissions. Restarting...", file=sys.stderr)
+            self.timer = self.loop.create_task(self.auto_handler_task(sub))
         except Exception as e:
             print("Error occurred during automatic handler:", file=sys.stderr)
             traceback.print_exception(type(e), e, e.__traceback__)
