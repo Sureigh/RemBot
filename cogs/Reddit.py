@@ -171,7 +171,8 @@ class FeedHandler:
         embed.set_author(url=f"https://reddit.com/r/{self.sub.display_name}",
                          name=f"/r/{self.sub.display_name}",
                          icon_url=icon)
-        embed.set_footer(text=f"/u/{submit.author.name}")
+        if submit.author.name:
+            embed.set_footer(text=f"/u/{submit.author.name}")
         if submit.url.endswith((".jpg", ".png", ".jpeg", ".webp", ".webm", ".gif", ".gifv")):
             embed.set_image(url=submit.url)
         if submit.selftext:
